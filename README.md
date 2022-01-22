@@ -1,2 +1,2 @@
-# maskedvault
-Protect your most important data and passwords with strong encryption in the vault
+# Nextpass
+A secure, reliable, and fast way to store your passwords in a encrypted manner. Provides top notch security for your credentials.
