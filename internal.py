@@ -178,7 +178,7 @@ class Internal():
             self.close()
             raise ValueError('Not a valid search query type. Please select either email, name, or website.')
 
-    def fetch_all(self) -> list: # why does this return None
+    def fetch_all(self) -> list
         return self.decrypt_data(self.sqlite_cursor.execute("SELECT * FROM passwords").fetchall()) or []
 
     def clear_mem(self) -> None:
@@ -199,7 +199,6 @@ class Internal():
             self.fileaes.decrypt_file('pwd.db')
         except:
             raise ValueError('Not the correct password.')
-        # os.remove('$3pwd.db.tmp')
         res = False
         with open(f'pwd.db', 'rb') as f:
             with open(f'PWD_DB_HASH.DBHASH', 'rb') as f1:
@@ -284,11 +283,7 @@ class Internal():
             sql_pre += tostr
             sql_vars.append(bcrypt.hashpw(id.encode(), self.salt))
             sql_pre += ' WHERE idHash = ' + '?'
-            # print(sql_pre)
-            # print(tuple(sql_vars))
-            # self.sqlite_cursor.execute("UPDATE passwords SET name = 'a' WHERE idHash = ?", (bcrypt.hashpw(id.encode(), self.salt),))
             querysql2 = self.sqlite_cursor.execute(sql_pre, tuple(sql_vars))
-            # self.sqlite_connection.commit()
         else:
             self.close()
             raise ValueError('Not a valid id to edit.')
@@ -390,4 +385,3 @@ class Internal():
                 raise ValueError('Not a valid token.')
         else:
             pass
-        # WHY its encrypted backups pass dude ik but what if its overwriting the db? true its not overwriting db

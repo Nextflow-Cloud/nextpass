@@ -142,19 +142,3 @@ except Exception as e:
     print("An unknown error occurred.", file=stream)
     print(e)
     exit(1)
-    #oh you know what the input was website, username, password but the output was website, username, email, password so thats the problem
-    #dude look @Queryzi look yeah we can do that and also all we do is replace cli with gui
-    #also we need to copy bw browser extension and change it to our system @Queryzi
-    #we need to figure out how to do sql in browser extension
-    #@queryzi @queryzi
-    #uh also passwords are e2e right? so server cant just create another api for it
-    #wait dude is the db itself encrypted or the passwords inside it
-    # if its only the passwords then we can just let server read db and send encrypted passwords
-    # overhttps 
-    # *sigh*
-    #can we make it only 1dude but instead of a db we send passwords in json
-    # client stores json
-    # true but you're using a browser
-    # which relies heavily on js 
-    # so we need to make it a browser extension
-    # sure

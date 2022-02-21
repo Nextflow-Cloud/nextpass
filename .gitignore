@@ -130,11 +130,6 @@ dmypy.json
 
 # Miscellaneous test files
 testing/
-important_hash_files/
-tests/
-stop.cmd
-pwd.db
 PWD_DB_HASH.DBHASH
 SALT_PWD.HASH
-test.py
-test.db
+pwd.db
