@@ -37,7 +37,7 @@ class Internal():
             self.decrypt_db()
         else:
             if (self.internet()):
-                if (self.validate()):
+                if (self.validate()): # this is only active if the db doesnt exist and it exists in the server
                     topassHeaders = { 'Authorization': json.dumps({ 'token': self.token }) }
                     if (Internal.is_downloadable(f'{self.server_url}/api/nextpass/db', headers=topassHeaders) and Internal.is_downloadable(f'{self.server_url}/api/nextpass/db/hash', headers=topassHeaders) and Internal.is_downloadable(f'{self.server_url}/api/nextpass/pwd/salt', headers=topassHeaders)):
                         self.download(f'{self.server_url}/api/nextpass/db', topassHeaders, 'pwd.db')
@@ -57,6 +57,7 @@ class Internal():
             name text,
             idHash text,
             emailHash text,
+            idEncrypted text,
             emailEncrypted text,
             passwordEncrypted text,
             secret2faEncrypted text,
@@ -93,11 +94,9 @@ class Internal():
     def id(self):
         charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890'
         gened_id = ''
-        for i in range(8):
-            for j in range(8):
-                for k in range(8):
-                    gened_id += secrets.choice(charset)
-                gened_id += '-'
+        for i in range(4):
+            for j in range(4):
+                gened_id += secrets.choice(charset)
             gened_id += '-'
         
         gened_id = list(gened_id)
@@ -107,7 +106,9 @@ class Internal():
 
     def add_item(self, website: str, name: str, email: str, password: str, secret2fa = "", notes = "") -> int:
         hashedEmail = bcrypt.hashpw(email.encode(), self.salt)
-        hashedId = bcrypt.hashpw(self.id().encode(), self.salt)
+        ida = self.id()
+        hashedId = bcrypt.hashpw(ida.encode(), self.salt)
+        encryptedId = self.fileaes.encrypt_text(ida)
         querysql2 = self.sqlite_cursor.execute("SELECT * FROM passwords WHERE website LIKE ? AND emailHash LIKE ?", (website, hashedEmail,)).fetchone()
         if (querysql2):
             self.close()
@@ -127,7 +128,7 @@ class Internal():
         #     'notes': encryptedNotes
         # })
 
-        querysql = self.sqlite_cursor.execute("INSERT INTO passwords VALUES (?,?,?,?,?,?,?,?)", (website, name, hashedId, hashedEmail, encryptedEmail, encryptedPassword, encrypted2fasecret, encryptedNotes,))
+        querysql = self.sqlite_cursor.execute("INSERT INTO passwords VALUES (?,?,?,?,?,?,?,?,?)", (website, name, hashedId, hashedEmail, encryptedId, encryptedEmail, encryptedPassword, encrypted2fasecret, encryptedNotes,))
         return 0
     
     def generatePassword(self, length: int, punctuation = True, digits = True) -> str:
@@ -176,7 +177,9 @@ class Internal():
         else:
             self.close()
             raise ValueError('Not a valid search query type. Please select either email, name, or website.')
-        
+
+    def fetch_all(self) -> list: # why does this return None
+        return self.decrypt_data(self.sqlite_cursor.execute("SELECT * FROM passwords").fetchall()) or []
 
     def clear_mem(self) -> None:
         self.loaded_pwds.clear()
@@ -212,9 +215,80 @@ class Internal():
             raise ValueError('Not the correct password.')
 
     def edit(self, id: str, **toset) -> None:
-        querysql = self.sqlite_cursor.execute("SELECT * FROM passwords WHERE idHash LIKE ?", (bcrypt.hashpw(id.encode(), self.salt),)).fetchone()
+        querysql = self.sqlite_cursor.execute("SELECT * FROM passwords WHERE idHash LIKE ?", (bcrypt.hashpw(id.encode(), self.salt).decode(),)).fetchone()
+        # do not modify that
         if (querysql):
-            querysql2 = self.sqlite_cursor.execute("UPDATE passwords SET ")
+            sql_pre = "UPDATE passwords SET "
+            tostr = ''
+            how_much = []
+            sql_vars = []
+            allowed_to_modify = ['website', 'name', 'id', 'email', 'password', 'secret2fa', 'notes']
+            toset_items = list(toset.items())
+            for i in range(len(toset_items)):
+                if (not (isinstance(toset_items[i][1], str))):
+                    pass
+                else:
+                    if (toset_items[i][0].lower() == 'email'):
+                        if (len(how_much) > 0):
+                            tostr += ', '
+                        how_much.append('email')
+                        how_much.append('emailHash')
+                        
+                        tostr += 'emailHash = '
+                        sql_vars.append(bcrypt.hashpw(toset_items[i][1].encode(), self.salt).decode())
+                        sql_vars.append(self.fileaes.encrypt_text(toset_items[i][1]))
+                        tostr += '?'
+                        tostr += ', '
+                        tostr += 'emailEncrypted = '
+                        tostr += '?'
+                    elif (toset_items[i][0].lower() == 'password'):
+                        if (len(how_much) > 0):
+                            tostr += ', '
+                        how_much.append('passwordEncrypted')
+
+                        tostr += 'passwordEncrypted = '
+                        sql_vars.append(self.fileaes.encrypt_text(toset_items[i][1]))
+                        tostr += '?'
+                    elif (toset_items[i][0].lower() == 'secret2fa'):
+                        if (len(how_much) > 0):
+                            tostr += ', '
+                        how_much.append('secret2faEncrypted')
+
+                        tostr += 'secret2faEncrypted = '
+                        sql_vars.append(self.fileaes.encrypt_text(toset_items[i][1]))
+                        tostr += '?'
+                    elif (toset_items[i][0].lower() == 'notes'):
+                        if (len(how_much) > 0):
+                            tostr += ', '
+                        how_much.append('notes')
+
+                        tostr += 'notes = '
+                        sql_vars.append(self.fileaes.encrypt_text(toset_items[i][1]))
+                        tostr += '?'
+                    elif (toset_items[i][0].lower() == 'website'):
+                        if (len(how_much) > 0):
+                            tostr += ', '
+                        how_much.append('website')
+
+                        tostr += 'website = '
+                        sql_vars.append(toset_items[i][1])
+                        tostr += '?'
+                    elif (toset_items[i][0].lower() == 'name'):
+                        if (len(how_much) > 0):
+                            tostr += ', '
+                        how_much.append('name')
+
+                        tostr += 'name = '
+                        sql_vars.append(toset_items[i][1])
+                        tostr += '?'
+            sql_pre += tostr
+            sql_vars.append(bcrypt.hashpw(id.encode(), self.salt))
+            sql_pre += ' WHERE idHash = ' + '?'
+            # print(sql_pre)
+            # print(tuple(sql_vars))
+            # self.sqlite_cursor.execute("UPDATE passwords SET name = 'a' WHERE idHash = ?", (bcrypt.hashpw(id.encode(), self.salt),))
+            querysql2 = self.sqlite_cursor.execute(sql_pre, tuple(sql_vars))
+            # self.sqlite_connection.commit()
         else:
             self.close()
             raise ValueError('Not a valid id to edit.')
@@ -255,11 +329,13 @@ class Internal():
 
     def decrypt_datum(self, data_tuple: tuple) -> tuple:
         try:
-            if len(data_tuple) != 7:
+            if len(data_tuple) != 9:
                 self.close()
                 raise ValueError('Not a valid tuple')
-            data = list(data_tuple[3:])
-            new_data = list(data_tuple[:3])
+            data = list(data_tuple)[4:]
+            new_data = list(data_tuple)[:2]
+            new_data.append(list(data_tuple)[2])
+            new_data.append(list(data_tuple)[3])
             for i in range(len(data)):
                 new_data.append(self.fileaes.decrypt_text(data[i]))
         except:
@@ -314,3 +390,4 @@ class Internal():
                 raise ValueError('Not a valid token.')
         else:
             pass
+        # WHY its encrypted backups pass dude ik but what if its overwriting the db? true its not overwriting db

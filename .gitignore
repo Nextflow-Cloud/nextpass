@@ -129,7 +129,12 @@ dmypy.json
 .pyre/
 
 # Miscellaneous test files
+testing/
 important_hash_files/
-basic.spec
 tests/
-nextflowsso.exe.WebView2
+stop.cmd
+pwd.db
+PWD_DB_HASH.DBHASH
+SALT_PWD.HASH
+test.py
+test.db
