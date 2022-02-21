@@ -37,7 +37,7 @@ class Internal():
             self.decrypt_db()
         else:
             if (self.internet()):
-                if (self.validate()): # this is only active if the db doesnt exist and it exists in the server
+                if (self.validate()):
                     topassHeaders = { 'Authorization': json.dumps({ 'token': self.token }) }
                     if (Internal.is_downloadable(f'{self.server_url}/api/nextpass/db', headers=topassHeaders) and Internal.is_downloadable(f'{self.server_url}/api/nextpass/db/hash', headers=topassHeaders) and Internal.is_downloadable(f'{self.server_url}/api/nextpass/pwd/salt', headers=topassHeaders)):
                         self.download(f'{self.server_url}/api/nextpass/db', topassHeaders, 'pwd.db')
